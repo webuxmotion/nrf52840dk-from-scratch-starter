@@ -1,0 +1,27 @@
+# --- Папки збирання та тимчасові файли Zephyr ---
+build/
+build_*/
+
+# --- Файли конфігурації VS Code ---
+.vscode/
+!.vscode/extensions.json
+
+# --- Локальні файли конфігурації середовища ---
+.ninja_deps
+.ninja_log
+CMakeCache.txt
+CMakeFiles/
+
+# --- Тимчасові файли та сміття від Vim ---
+.*.swp
+.*.swo
+.swp
+.swo
+*~
+*.un~
+.netrwhist
+
+# --- Резервні та тимчасові файли ОС ---
+.DS_Store
+Thumbs.db
+*.bak
