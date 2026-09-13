@@ -7,10 +7,6 @@
 #include "controls.h"
 #include "render.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 static int current_fps = 0;
 static int frame_count = 0;
 static int32_t last_fps_time = 0;
@@ -33,38 +29,39 @@ int main(void) {
 	cfb_framebuffer_invert(display);
 
 	init_controls();
-	generate_points();
 
 	uint16_t width = cfb_get_display_parameter(display, CFB_DISPLAY_WIDTH);
 	uint16_t height = cfb_get_display_parameter(display, CFB_DISPLAY_HEIGHT);
 
-	float camAngle = M_PI + (M_PI / 2.0f);
-	float vr = 0.0f, vx = 0.0f, vy = 0.0f, vz = 0.0f, thrust = 0.0f;
-	Point3D camera = { .x = 0.0f, .y = 0.0f, .z = -900.0f };
+	srand(k_cycle_get_32());
+	generate_points(width, height);
 
+	/* Початковий базовий радіус плями (адаптований під невеликий екран) */
+	float blob_radius = (float)height * 0.3f; 
+	if (blob_radius < 10.0f) blob_radius = 24.0f;
+
+	bool radius_minus = false, radius_plus = false, btn_regen = false, show_nodes = true;
+
+	/* Стабільний період кадру */
 	k_timer_start(&anim_timer, K_NO_WAIT, K_MSEC(20)); 
 
 	while (1) {
 		k_sem_take(&display_sem, K_FOREVER);
 
-		/* 1. Миттєво зчитуємо безпечну копію стану кнопок */
-		get_controls_snapshot(&vr, &thrust, &vy);
+		get_controls_snapshot(&radius_minus, &radius_plus, &btn_regen, &show_nodes);
+
+		/* Інтерактивна зміна базового радіуса з кнопок */
+		if (radius_minus) { blob_radius -= 0.8f; if (blob_radius < 5.0f) blob_radius = 5.0f; }
+		if (radius_plus)  { blob_radius += 0.8f; if (blob_radius > (width * 0.45f)) blob_radius = width * 0.45f; }
+		
+		if (btn_regen) { generate_points(width, height); }
 
 		cfb_framebuffer_clear(display, false);
 
-		/* 2. Малюємо 3D сцену (вже оптимізовану) */
-		render_frame(display, &camera, camAngle, width, height);
+		/* Постійна дельта часу для плавності (~0.025 сек) */
+		update_and_render_blob(display, 0.025f, blob_radius, show_nodes, width, height);
 
-		/* 3. Фізика руху */
-		camAngle += vr;
-		vx += cosf(camAngle) * thrust;
-		vz += sinf(camAngle) * thrust;
-
-		if (fabsf(vx) > 0.01f) { vx *= 0.995f; camera.x += vx; }
-		if (fabsf(vz) > 0.01f) { vz *= 0.995f; camera.z += vz; }
-		camera.y += vy;
-
-		/* 4. Обчислення FPS */
+		/* FPS */
 		frame_count++;
 		int32_t current_time = k_uptime_get_32();
 		if (current_time - last_fps_time >= 1000) {
@@ -79,10 +76,6 @@ int main(void) {
 		cfb_print(display, fps_buf, 0, 0);
 
 		cfb_framebuffer_finalize(display);
-
-    /* Додаємо мікропаузу в 2-3 мілісекунди після фіналізації. 
-		   Вона дозволить DMA / I2C / SPI драйверу повністю завершити 
-		   передачу даних у RAM дисплея до того, як почнеться очищення наступного кадру */
 		k_msleep(2);
 	}
 	return 0;

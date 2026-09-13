@@ -1,70 +1,67 @@
 #include "controls.h"
 
-static const struct gpio_dt_spec btn_left   = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
-static const struct gpio_dt_spec btn_right  = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios);
-static const struct gpio_dt_spec btn_thrust = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios);
-static const struct gpio_dt_spec btn_toggle = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
+static const struct gpio_dt_spec btn_sw0 = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static const struct gpio_dt_spec btn_sw1 = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios);
+static const struct gpio_dt_spec btn_sw2 = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios);
+static const struct gpio_dt_spec btn_sw3 = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
 
-static struct gpio_callback cb_left, cb_right, cb_thrust, cb_toggle;
+static struct gpio_callback cb_sw0, cb_sw1, cb_sw2, cb_sw3;
 
-static volatile bool is_left_pressed = false;
-static volatile bool is_right_pressed = false;
-static volatile bool is_thrust_pressed = false;
-static volatile bool is_toggle_pressed = false;
-static volatile bool next_vertical_dir_is_top = true;
+static volatile bool is_sw0_pressed = false;
+static volatile bool is_sw1_pressed = false;
+static volatile bool is_sw2_pressed = false;
+static volatile bool is_sw3_pressed = false;
 
-static void handler_left(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
-	is_left_pressed = gpio_pin_get_dt(&btn_left);
+static volatile bool ui_show_nodes = true;
+static volatile bool regen_trigger = false;
+
+static void handler_sw0(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+	is_sw0_pressed = gpio_pin_get_dt(&btn_sw0);
 }
-static void handler_right(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
-	is_right_pressed = gpio_pin_get_dt(&btn_right);
+static void handler_sw1(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+	is_sw1_pressed = gpio_pin_get_dt(&btn_sw1);
 }
-static void handler_thrust(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
-	is_thrust_pressed = gpio_pin_get_dt(&btn_thrust);
+static void handler_sw2(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+	if (gpio_pin_get_dt(&btn_sw2)) { regen_trigger = true; }
 }
-static void handler_toggle(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
-	bool current_state = gpio_pin_get_dt(&btn_toggle);
-	if (current_state && !is_toggle_pressed) {
-		next_vertical_dir_is_top = !next_vertical_dir_is_top;
+static void handler_sw3(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+	if (gpio_pin_get_dt(&btn_sw3) && !is_sw3_pressed) {
+		ui_show_nodes = !ui_show_nodes;
 	}
-	is_toggle_pressed = current_state;
+	is_sw3_pressed = gpio_pin_get_dt(&btn_sw3);
 }
 
 void init_controls(void) {
-	if (device_is_ready(btn_left.port)) {
-		gpio_pin_configure_dt(&btn_left, GPIO_INPUT);
-		gpio_pin_interrupt_configure_dt(&btn_left, GPIO_INT_EDGE_BOTH);
-		gpio_init_callback(&cb_left, handler_left, BIT(btn_left.pin));
-		gpio_add_callback(btn_left.port, &cb_left);
+	if (device_is_ready(btn_sw0.port)) {
+		gpio_pin_configure_dt(&btn_sw0, GPIO_INPUT);
+		gpio_pin_interrupt_configure_dt(&btn_sw0, GPIO_INT_EDGE_BOTH);
+		gpio_init_callback(&cb_sw0, handler_sw0, BIT(btn_sw0.pin));
+		gpio_add_callback(btn_sw0.port, &cb_sw0);
 	}
-	if (device_is_ready(btn_right.port)) {
-		gpio_pin_configure_dt(&btn_right, GPIO_INPUT);
-		gpio_pin_interrupt_configure_dt(&btn_right, GPIO_INT_EDGE_BOTH);
-		gpio_init_callback(&cb_right, handler_right, BIT(btn_right.pin));
-		gpio_add_callback(btn_right.port, &cb_right);
+	if (device_is_ready(btn_sw1.port)) {
+		gpio_pin_configure_dt(&btn_sw1, GPIO_INPUT);
+		gpio_pin_interrupt_configure_dt(&btn_sw1, GPIO_INT_EDGE_BOTH);
+		gpio_init_callback(&cb_sw1, handler_sw1, BIT(btn_sw1.pin));
+		gpio_add_callback(btn_sw1.port, &cb_sw1);
 	}
-	if (device_is_ready(btn_thrust.port)) {
-		gpio_pin_configure_dt(&btn_thrust, GPIO_INPUT);
-		gpio_pin_interrupt_configure_dt(&btn_thrust, GPIO_INT_EDGE_BOTH);
-		gpio_init_callback(&cb_thrust, handler_thrust, BIT(btn_thrust.pin));
-		gpio_add_callback(btn_thrust.port, &cb_thrust);
+	if (device_is_ready(btn_sw2.port)) {
+		gpio_pin_configure_dt(&btn_sw2, GPIO_INPUT);
+		gpio_pin_interrupt_configure_dt(&btn_sw2, GPIO_INT_EDGE_TO_ACTIVE);
+		gpio_init_callback(&cb_sw2, handler_sw2, BIT(btn_sw2.pin));
+		gpio_add_callback(btn_sw2.port, &cb_sw2);
 	}
-	if (device_is_ready(btn_toggle.port)) {
-		gpio_pin_configure_dt(&btn_toggle, GPIO_INPUT);
-		gpio_pin_interrupt_configure_dt(&btn_toggle, GPIO_INT_EDGE_BOTH);
-		gpio_init_callback(&cb_toggle, handler_toggle, BIT(btn_toggle.pin));
-		gpio_add_callback(btn_toggle.port, &cb_toggle);
+	if (device_is_ready(btn_sw3.port)) {
+		gpio_pin_configure_dt(&btn_sw3, GPIO_INPUT);
+		gpio_pin_interrupt_configure_dt(&btn_sw3, GPIO_INT_EDGE_BOTH);
+		gpio_init_callback(&cb_sw3, handler_sw3, BIT(btn_sw3.pin));
+		gpio_add_callback(btn_sw3.port, &cb_sw3);
 	}
 }
 
-/* Робимо швидку копію стану, унеможливлюючи Race Condition під час рендеру */
-void get_controls_snapshot(float *out_vr, float *out_thrust, float *out_vy) {
-	if ((!is_left_pressed && !is_right_pressed) || (is_left_pressed && is_right_pressed)) {
-		*out_vr = 0.0f;
-	} else {
-		*out_vr = is_left_pressed ? -TURN_SPEED : TURN_SPEED;
-	}
-
-	*out_thrust = is_thrust_pressed ? FORWARD_THRUST_SPEED : 0.0f;
-	*out_vy = is_toggle_pressed ? (next_vertical_dir_is_top ? VERTICAL_SPEED : -VERTICAL_SPEED) : 0.0f;
+void get_controls_snapshot(bool *out_radius_minus, bool *out_radius_plus, bool *out_regenerate, bool *out_toggle_ui) {
+	*out_radius_minus = is_sw0_pressed;
+	*out_radius_plus = is_sw1_pressed;
+	*out_regenerate = regen_trigger;
+	regen_trigger = false;
+	*out_toggle_ui = ui_show_nodes;
 }

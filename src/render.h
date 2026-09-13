@@ -3,12 +3,11 @@
 
 #include <zephyr/device.h>
 
-#define TUNNEL_SECTIONS 16
-#define POINTS_COUNT (TUNNEL_SECTIONS * 4)
+#define POINTS_NUMBER 20
+/* Замкнене коло: 20 базових точок + 20 проміжних серединних = 40 точок */
+#define NEW_POINTS_COUNT ((POINTS_NUMBER) * 2)
 
-typedef struct { float x; float y; float z; } Point3D;
-
-void generate_points(void);
-void render_frame(const struct device *display, Point3D *camera, float camAngle, uint16_t width, uint16_t height);
+void generate_points(uint16_t width, uint16_t height);
+void update_and_render_blob(const struct device *display, float delta_time, float current_radius, bool show_nodes, uint16_t width, uint16_t height);
 
 #endif
