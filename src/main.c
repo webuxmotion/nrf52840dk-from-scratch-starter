@@ -33,13 +33,38 @@ int main(void)
 	cfb_framebuffer_clear(display, false);
 	cfb_framebuffer_invert(display);
 
-	cfb_draw_line(display, &(struct cfb_position){0, 0},           &(struct cfb_position){width - 1, 0});
-	cfb_draw_line(display, &(struct cfb_position){width / 2, 0},   &(struct cfb_position){width - 1, height - 1});
-	cfb_draw_line(display, &(struct cfb_position){width - 1, height - 1}, &(struct cfb_position){0, height - 1});
-	cfb_draw_line(display, &(struct cfb_position){0, height - 1},   &(struct cfb_position){0, 0});
+	/* 1. Малюємо рамку по контуру */
+	cfb_draw_rect(display, &(struct cfb_position){0, 0}, &(struct cfb_position){width - 1, height - 1});
 
+	/* 2. Малюємо горизонтальну лінію */
+	cfb_draw_line(display, &(struct cfb_position){0, 20}, &(struct cfb_position){width - 1, 20});
+
+	/* 3. Маленький шрифт (Індекс 0) для заголовка */
+	cfb_framebuffer_set_font(display, 0);
+	cfb_draw_text(display, "Font 0: SH1106 Demo", 6, 4);
+
+	/* 4. Середній шрифт (Індекс 1) */
+	cfb_framebuffer_set_font(display, 1);
+	cfb_draw_text(display, "Font 1", 6, 24);
+
+	/* 5. Повертаємося на маленький шрифт (Індекс 0) для решта елементів */
+	cfb_framebuffer_set_font(display, 0);
+
+	/* 6. Малюємо коло зліва внизу */
+	cfb_draw_circle(display, &(struct cfb_position){24, 48}, 12);
+
+	/* 7. Малюємо точки поруч із колом */
+	cfb_draw_point(display, &(struct cfb_position){50, 48});
+	cfb_draw_point(display, &(struct cfb_position){54, 48});
+	cfb_draw_point(display, &(struct cfb_position){58, 48});
+
+	/* 8. Виводимо текст меню та інвертуємо плашку */
+	cfb_draw_text(display, "MENU ITEM", 66, 44);
+	cfb_invert_area(display, 64, 42, 60, 18);
+
+	/* Відправляємо кадр на OLED */
 	cfb_framebuffer_finalize(display);
-	LOG_INF("Lines sent to display. Sleeping.");
+	LOG_INF("Lines and multiple fonts sent to display. Sleeping.");
 
 	while (1) {
 		k_sleep(K_FOREVER);
