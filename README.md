@@ -7,6 +7,8 @@ west list - побачити версії всіх модулів та бібл�
 
 west build -p -b nrf52840dk/nrf52840
 
+west build -p -b nrf52840dk/nrf52840 && west flash
+
 west flash
 
 ls /dev/tty.usbmodem*
