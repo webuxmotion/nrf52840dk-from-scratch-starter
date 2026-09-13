@@ -3,8 +3,13 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/display/cfb.h>
 #include <zephyr/logging/log.h>
+#include <math.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 static const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
@@ -33,36 +38,31 @@ int main(void)
 	cfb_framebuffer_clear(display, false);
 	cfb_framebuffer_invert(display);
 
-	/* 1. Малюємо рамку по контуру */
-	cfb_draw_rect(display, &(struct cfb_position){0, 0}, &(struct cfb_position){width - 1, height - 1});
+  const int sides = 20;
+	const float radius = 30.0;
+	const float angleStep = (M_PI * 2.0) / sides;
 
-	/* 2. Малюємо горизонтальну лінію */
-	cfb_draw_line(display, &(struct cfb_position){0, 20}, &(struct cfb_position){width - 1, 20});
+  const int center_x = width / 2;
+	const int center_y = height / 2;
 
-	/* 3. Маленький шрифт (Індекс 0) для заголовка */
-	cfb_framebuffer_set_font(display, 0);
-	cfb_draw_text(display, "Font 0: SH1106 Demo", 6, 4);
+  struct cfb_position points[sides];
 
-	/* 4. Середній шрифт (Індекс 1) */
-	cfb_framebuffer_set_font(display, 1);
-	cfb_draw_text(display, "Font 1", 6, 24);
+  for (int i = 0; i < sides; i++) {
+    float x_calc = (cosf(angleStep * (float)i) * radius) + (float)center_x;
+    float y_calc = (sinf(angleStep * (float)i) * radius) + (float)center_y;
 
-	/* 5. Повертаємося на маленький шрифт (Індекс 0) для решта елементів */
-	cfb_framebuffer_set_font(display, 0);
+    points[i].x = (uint16_t)lroundf(x_calc);
+    points[i].y = (uint16_t)lroundf(y_calc);
+  }
 
-	/* 6. Малюємо коло зліва внизу */
-	cfb_draw_circle(display, &(struct cfb_position){24, 48}, 12);
+  for (int i = 0; i < sides; i++) {
+		if (i < sides - 1) {
+			cfb_draw_line(display, &points[i], &points[i + 1]);
+		} else {
+			cfb_draw_line(display, &points[i], &points[0]);
+		}
+	}
 
-	/* 7. Малюємо точки поруч із колом */
-	cfb_draw_point(display, &(struct cfb_position){50, 48});
-	cfb_draw_point(display, &(struct cfb_position){54, 48});
-	cfb_draw_point(display, &(struct cfb_position){58, 48});
-
-	/* 8. Виводимо текст меню та інвертуємо плашку */
-	cfb_draw_text(display, "MENU ITEM", 66, 44);
-	cfb_invert_area(display, 64, 42, 60, 18);
-
-	/* Відправляємо кадр на OLED */
 	cfb_framebuffer_finalize(display);
 	LOG_INF("Lines and multiple fonts sent to display. Sleeping.");
 
