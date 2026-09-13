@@ -9,6 +9,10 @@ west build -p -b nrf52840dk/nrf52840
 
 west flash
 
+or 
+
+west build && west flash
+
 ls /dev/tty.usbmodem*
 
 screen /dev/tty.usbmodem0010502028451 115200
