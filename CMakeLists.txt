@@ -8,4 +8,5 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf52840_hello_world)
 
 # Вказуємо файл із головною функцією main для компіляції
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c src/controls.c src/render.c)
+
