@@ -34,7 +34,7 @@ int main(void)
 	cfb_framebuffer_invert(display);
 
 	cfb_draw_line(display, &(struct cfb_position){0, 0},           &(struct cfb_position){width - 1, 0});
-	cfb_draw_line(display, &(struct cfb_position){width - 1, 0},   &(struct cfb_position){width - 1, height - 1});
+	cfb_draw_line(display, &(struct cfb_position){width / 2, 0},   &(struct cfb_position){width - 1, height - 1});
 	cfb_draw_line(display, &(struct cfb_position){width - 1, height - 1}, &(struct cfb_position){0, height - 1});
 	cfb_draw_line(display, &(struct cfb_position){0, height - 1},   &(struct cfb_position){0, 0});
 

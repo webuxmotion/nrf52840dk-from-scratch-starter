@@ -1,14 +1,3 @@
-/*
- * OLED SH1106 (Waveshare 1.3", 128x64) on spi1 in 4-wire SPI mode.
- *
- * Wiring (see hardware.txt):
- *   DIN -> P1.06  spi1 MOSI
- *   CLK -> P1.05  spi1 SCK
- *   CS  -> P0.04
- *   D/C -> P0.29
- *   RES -> P0.30  (active low)
- */
-
 #include <zephyr/dt-bindings/gpio/gpio.h>
 
 / {
@@ -17,12 +6,6 @@
 	};
 };
 
-/*
- * The board defaults put spi1 on P0.31/P0.30/P1.08. P0.30 is the display
- * reset line here, so both pinctrl states are re-pointed at the wired pins.
- * MISO is left out: the OLED is write-only. Add it back when a device that
- * talks back (e.g. the BNO085) joins the bus.
- */
 &pinctrl {
 	spi1_default: spi1_default {
 		group1 {
@@ -41,46 +24,16 @@
 };
 
 &spi1 {
-	/*
-	 * The board dts pins spi1 to "nordic,nrf-spi", the legacy block with
-	 * no EasyDMA, which clocks bytes out one interrupt at a time. Pushing
-	 * a 1 KB framebuffer at it every frame overruns that: a transfer
-	 * eventually misses its completion deadline, spi_write_dt() returns
-	 * mid-page, and the display driver abandons the transaction with the
-	 * panel still expecting data. From then on D/C framing is off by a
-	 * page and stray data bytes land as commands.
-	 *
-	 * SPIM moves the same bytes over EasyDMA with one interrupt per
-	 * transfer instead of per byte.
-	 */
 	compatible = "nordic,nrf-spim";
 	status = "okay";
-
-	/*
-	 * The OLED is the only device on the bus right now, so its chip select
-	 * sits at cs-gpios index 0 and the node uses reg = <0>.
-	 * When the BNO085 is added, put its CS first in this list and change
-	 * the display to sh1106@1 / reg = <1>.
-	 */
 	cs-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
 
 	oled: sh1106@0 {
 		compatible = "sinowealth,sh1106";
 		reg = <0>;
-
-		/*
-		 * 8 MHz puts a full 1 KB frame on the wire in about 1 ms, so
-		 * the frame rate is set by TICK_MS rather than by the bus.
-		 * If the panel ever shows stray pixels or a scrolled image,
-		 * drop this: the driver sends SSD1306_SET_START_LINE only at
-		 * init, so a corrupted command byte scrolls it permanently.
-		 */
 		spi-max-frequency = <8000000>;
-
 		width = <128>;
 		height = <64>;
-
-		/* SH1106 has 132 columns of RAM behind a 128-pixel panel. */
 		segment-offset = <2>;
 		page-offset = <0>;
 		display-offset = <0>;
@@ -88,7 +41,6 @@
 		prechargep = <0x22>;
 		segment-remap;
 		com-invdir;
-
 		data-cmd-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
 	};
