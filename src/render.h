@@ -3,11 +3,15 @@
 
 #include <zephyr/device.h>
 
-#define POINTS_NUMBER 20
-/* Замкнене коло: 20 базових точок + 20 проміжних серединних = 40 точок */
-#define NEW_POINTS_COUNT ((POINTS_NUMBER) * 2)
+#define SEGMENTS_COUNT 10
 
-void generate_points(uint16_t width, uint16_t height);
-void update_and_render_blob(const struct device *display, float delta_time, float current_radius, bool show_nodes, uint16_t width, uint16_t height);
+typedef struct {
+	float x;
+	float y;
+} Vector2D;
+
+void init_geometry_points(uint16_t width, uint16_t height);
+void move_geometry_point(int index, float dx, float dy);
+void do_math_and_render(const struct device *display, float border_radius, int selected_idx, uint16_t width, uint16_t height);
 
 #endif
