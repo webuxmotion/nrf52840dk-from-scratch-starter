@@ -40,31 +40,20 @@ static inline bool is_point_on_right_side(float x1, float z1, float x2, float z2
 	return ((x2 - x1) * (pz - z1) - (z2 - z1) * (px - x1)) <= 0;
 }
 
+/* НАДШВИДКА ОПТИМІЗОВАНА ФУНКЦІЯ НА БАЗІ БРЕЗЕНХЕМА */
 static void draw_ball_optimized(const struct device *display, int center_x, int center_y, float radius, uint16_t max_w, uint16_t max_h) {
 	int r = (int)lroundf(radius);
-	if (r <= 2) {
-		/* ОПТИМІЗАЦІЯ: Для маленьких/дальніх об'єктів малюємо швидку точку, без cosf/sinf */
-		struct cfb_position p = { (uint16_t)center_x, (uint16_t)center_y };
-		if (center_x >= 0 && center_x < max_w && center_y >= 0 && center_y < max_h) {
-			cfb_draw_line(display, &p, &p);
-		}
+	if (r < 1) r = 1; // Радіус не може бути меншим за 1 для cfb_draw_circle
+
+	/* Перевіряємо грубі межі екрана, щоб не викликати рендер для об'єктів повністю за екраном */
+	if (center_x + r < 0 || center_x - r >= max_w || center_y + r < 0 || center_y - r >= max_h) {
 		return;
 	}
 
-	/* ОПТИМІЗАЦІЯ: Чим менше коло, тим менше сторін малюємо */
-	int sides = r > 12 ? 10 : 6;
-	float angle_step = (M_PI * 2.0f) / (float)sides;
-
-	for (int i = 0; i < sides; i++) {
-		float x1 = cosf(angle_step * i) * r + center_x;
-		float y1 = sinf(angle_step * i) * r + center_y;
-		float x2 = cosf(angle_step * (i + 1)) * r + center_x;
-		float y2 = sinf(angle_step * (i + 1)) * r + center_y;
-
-		struct cfb_position p1 = { (uint16_t)lroundf(x1), (uint16_t)lroundf(y1) };
-		struct cfb_position p2 = { (uint16_t)lroundf(x2), (uint16_t)lroundf(y2) };
-		cfb_draw_line(display, &p1, &p2);
-	}
+	struct cfb_position center = { (uint16_t)center_x, (uint16_t)center_y };
+	
+	/* Виклик рідної функції Zephyr (цілочисельний алгоритм Брезенхема) */
+	cfb_draw_circle(display, &center, (uint16_t)r);
 }
 
 void render_frame(const struct device *display, Point3D *camera, float camAngle, uint16_t width, uint16_t height) {
@@ -72,7 +61,6 @@ void render_frame(const struct device *display, Point3D *camera, float camAngle,
 	float vpX = (float)width / 2.0f;
 	float vpY = (float)height / 2.0f;
 
-	/* ОПТИМІЗАЦІЯ: Розраховуємо тригонометрію камери ОДИН раз на кадр, а не для кожної точки! */
 	float cos_angle_p = cosf(camAngle + M_PI / 2.0f) * 250.0f;
 	float sin_angle_p = sinf(camAngle + M_PI / 2.0f) * 250.0f;
 	float cos_angle_m = cosf(camAngle - M_PI / 2.0f) * 250.0f;

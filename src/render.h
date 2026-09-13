@@ -3,7 +3,7 @@
 
 #include <zephyr/device.h>
 
-#define TUNNEL_SECTIONS 8
+#define TUNNEL_SECTIONS 16
 #define POINTS_COUNT (TUNNEL_SECTIONS * 4)
 
 typedef struct { float x; float y; float z; } Point3D;

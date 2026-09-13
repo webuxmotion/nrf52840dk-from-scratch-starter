@@ -42,8 +42,7 @@ int main(void) {
 	float vr = 0.0f, vx = 0.0f, vy = 0.0f, vz = 0.0f, thrust = 0.0f;
 	Point3D camera = { .x = 0.0f, .y = 0.0f, .z = -900.0f };
 
-	/* Налаштовуємо таймер на K_NO_WAIT. Період 15мс розблокує потенціал до 60+ FPS */
-	k_timer_start(&anim_timer, K_NO_WAIT, K_MSEC(15)); 
+	k_timer_start(&anim_timer, K_NO_WAIT, K_MSEC(20)); 
 
 	while (1) {
 		k_sem_take(&display_sem, K_FOREVER);
@@ -80,6 +79,11 @@ int main(void) {
 		cfb_print(display, fps_buf, 0, 0);
 
 		cfb_framebuffer_finalize(display);
+
+    /* Додаємо мікропаузу в 2-3 мілісекунди після фіналізації. 
+		   Вона дозволить DMA / I2C / SPI драйверу повністю завершити 
+		   передачу даних у RAM дисплея до того, як почнеться очищення наступного кадру */
+		k_msleep(2);
 	}
 	return 0;
 }
