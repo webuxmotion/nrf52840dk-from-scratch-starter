@@ -57,14 +57,7 @@ void init_controls(void) {
 	}
 }
 
-/* Робимо швидку копію стану, унеможливлюючи Race Condition під час рендеру */
-void get_controls_snapshot(float *out_vr, float *out_thrust, float *out_vy) {
-	if ((!is_left_pressed && !is_right_pressed) || (is_left_pressed && is_right_pressed)) {
-		*out_vr = 0.0f;
-	} else {
-		*out_vr = is_left_pressed ? -TURN_SPEED : TURN_SPEED;
-	}
+void get_controls_snapshot(float *rotate_speed) {
 
-	*out_thrust = is_thrust_pressed ? FORWARD_THRUST_SPEED : 0.0f;
-	*out_vy = is_toggle_pressed ? (next_vertical_dir_is_top ? VERTICAL_SPEED : -VERTICAL_SPEED) : 0.0f;
+  *rotate_speed = is_thrust_pressed ? ROTATE_SPEED : 0.0f;
 }

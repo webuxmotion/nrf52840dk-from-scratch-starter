@@ -3,12 +3,9 @@
 
 #include <zephyr/drivers/gpio.h>
 
-/* Налаштування швидкостей */
-#define FORWARD_THRUST_SPEED   -0.8f
-#define TURN_SPEED              0.08f
-#define VERTICAL_SPEED          9.0f
+#define ROTATE_SPEED          0.1f
 
 void init_controls(void);
-void get_controls_snapshot(float *out_vr, float *out_thrust, float *out_vy);
+void get_controls_snapshot(float *rotate_speed);
 
 #endif

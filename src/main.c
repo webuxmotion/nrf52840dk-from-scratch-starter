@@ -7,14 +7,6 @@
 #include "controls.h"
 #include "render.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-static int current_fps = 0;
-static int frame_count = 0;
-static int32_t last_fps_time = 0;
-
 static const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 K_SEM_DEFINE(display_sem, 0, 1);
 
@@ -28,61 +20,31 @@ int main(void) {
 		return -EIO;
 	}
 
-	cfb_framebuffer_clear(display, true);
-	display_blanking_off(display);
 	cfb_framebuffer_invert(display);
 
 	init_controls();
-	generate_points();
 
 	uint16_t width = cfb_get_display_parameter(display, CFB_DISPLAY_WIDTH);
 	uint16_t height = cfb_get_display_parameter(display, CFB_DISPLAY_HEIGHT);
 
-	float camAngle = M_PI + (M_PI / 2.0f);
-	float vr = 0.0f, vx = 0.0f, vy = 0.0f, vz = 0.0f, thrust = 0.0f;
-	Point3D camera = { .x = 0.0f, .y = 0.0f, .z = -900.0f };
+  float angle = 0.0f;
+  float rotate_speed = 0.0f;
 
 	k_timer_start(&anim_timer, K_NO_WAIT, K_MSEC(20)); 
 
 	while (1) {
 		k_sem_take(&display_sem, K_FOREVER);
 
-		/* 1. Миттєво зчитуємо безпечну копію стану кнопок */
-		get_controls_snapshot(&vr, &thrust, &vy);
+    get_controls_snapshot(&rotate_speed);
 
 		cfb_framebuffer_clear(display, false);
 
-		/* 2. Малюємо 3D сцену (вже оптимізовану) */
-		render_frame(display, &camera, camAngle, width, height);
+		render_frame(display, angle);
 
-		/* 3. Фізика руху */
-		camAngle += vr;
-		vx += cosf(camAngle) * thrust;
-		vz += sinf(camAngle) * thrust;
-
-		if (fabsf(vx) > 0.01f) { vx *= 0.995f; camera.x += vx; }
-		if (fabsf(vz) > 0.01f) { vz *= 0.995f; camera.z += vz; }
-		camera.y += vy;
-
-		/* 4. Обчислення FPS */
-		frame_count++;
-		int32_t current_time = k_uptime_get_32();
-		if (current_time - last_fps_time >= 1000) {
-			current_fps = frame_count;
-			frame_count = 0;
-			last_fps_time = current_time;
-		}
-
-		char fps_buf[16];
-		snprintf(fps_buf, sizeof(fps_buf), "FPS:%d", current_fps);
-		cfb_framebuffer_set_font(display, 0);
-		cfb_print(display, fps_buf, 0, 0);
+    angle += rotate_speed;
 
 		cfb_framebuffer_finalize(display);
 
-    /* Додаємо мікропаузу в 2-3 мілісекунди після фіналізації. 
-		   Вона дозволить DMA / I2C / SPI драйверу повністю завершити 
-		   передачу даних у RAM дисплея до того, як почнеться очищення наступного кадру */
 		k_msleep(2);
 	}
 	return 0;
